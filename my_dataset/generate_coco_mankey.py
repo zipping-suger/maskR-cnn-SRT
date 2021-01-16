@@ -190,7 +190,7 @@ def mask2bbox(mask_img):  # type: (np.ndarray) -> (PixelCoord, PixelCoord)
 #     bottom_right.x = right
 #     bottom_right.y = bottom
 #     return top_left, bottom_right
-    return [ left, top, right,bottom]
+    return [left, top, right,bottom]
 
 
 def mask_to_yaml(log_path):
@@ -218,6 +218,26 @@ def mask_to_yaml(log_path):
 
         with open(yaml_path, "a") as f:
             yaml.dump(yaml_dict, f)
+
+        ## Check
+        vis = "%06i_visible_mask.png" % i
+        vis_a = os.path.join(mask_frames_path, vis)
+        save_path = os.path.join(log_path, "bbox_test")
+        assert os.path.exists(vis_a)
+        img = cv2.imread(vis_a)
+        xmin = left_top_right_bottom[0]
+        xmax = left_top_right_bottom[2]
+        ymin = left_top_right_bottom[1]
+        ymax = left_top_right_bottom[3]
+
+        draw = cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (0, 0, 255), 2)
+        save = "%06i_bbox_mask.png" % i
+        save_file = os.path.join(save_path, save)
+        cv2.imwrite(save_file, draw)
+
+
+
+
 
 
 
@@ -407,11 +427,17 @@ config_dict = {
 main_path = "D:\Student Research Training\mankey_to_coco"
 
 log_path = os.path.join(main_path, "mankey_dataset/2019-11-19-21-00-00")
+save_path = os.path.join(log_path, "bbox_test")
+
+if os.path.exists(save_path):
+     shutil.rmtree(save_path)
+if not os.path.exists(save_path):
+     os.makedirs(save_path)
+
 if not os.path.exists(log_path):
     os.makedirs(log_path)
 
 mask_to_yaml(log_path)
-
 coco_path = os.path.join(main_path, "coco_test")
 if os.path.exists(coco_path):
     shutil.rmtree(coco_path)
@@ -428,3 +454,7 @@ for data_path in config_dict['val']:
     Make_coco.add_data_to_coco('val', data_path=data_path,
                                category_number=category_number)
     print('Total number of val dataset is :', Make_coco.get_dataset_number('val'))
+
+
+
+
