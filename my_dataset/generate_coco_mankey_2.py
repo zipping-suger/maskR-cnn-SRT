@@ -168,19 +168,40 @@ def mask2bbox(mask_img):  # type: (np.ndarray) -> (PixelCoord, PixelCoord)
     :param mask_img: (height, width, 3) mask image
     :return: A tuple contains top_left and bottom_right pixel coord
     """
-    binary_mask = mask_img.max(axis=2)
+    binary_mask = mask_img#.max(axis=2)
     n_rows, n_cols = binary_mask.shape
     # Compute sum over the row and compute the left and right
     mask_rowsum = np.sum(binary_mask, axis=0, keepdims=False)
     assert mask_rowsum.size == n_cols
     left = first_nonzero_idx(mask_rowsum, False)
     right = first_nonzero_idx(mask_rowsum, True)
-
+    ratio = 0.1
     # Compute sum over the col and compute the top and bottom
     mask_colsum = np.sum(binary_mask, axis=1)
     assert mask_colsum.size == n_rows
     top = first_nonzero_idx(mask_colsum, False)
     bottom = first_nonzero_idx(mask_colsum, True)
+
+    width = right - left
+    height =bottom - top
+
+    if left - width*ratio > 0:
+        left = int(left - width*ratio)
+    else:
+        left = 1
+    if right + width*ratio < 640:
+        right = int(right + width*ratio)
+    else:
+        right = 639
+    if bottom + height*ratio < 480:
+        bottom = int(bottom + height*ratio)
+    else:
+        bottom = 479
+    if top  - height*ratio > 0:
+        top = int(top  - height*ratio)
+    else:
+        top = 1
+
 
     # Ok
 #     top_left = PixelCoord()
@@ -199,13 +220,21 @@ def mask_to_yaml(log_path):
     file_name_lists = os.listdir(mask_frames_path)
 
     save_path = os.path.join(log_path, "bbox_test")
+    save_path2 = os.path.join(log_path, "bbox_test2")
+
     if os.path.exists(save_path):
         shutil.rmtree(save_path)
     if not os.path.exists(save_path):
         os.makedirs(save_path)
+
+    if os.path.exists(save_path2):
+        shutil.rmtree(save_path2)
+    if not os.path.exists(save_path2):
+        os.makedirs(save_path2)
+
     if not os.path.exists(log_path):
         os.makedirs(log_path)
-
+    assert len(file_name_lists) % 2 == 0
     if len(file_name_lists) % 2 == 0:
         num_images = int((len(file_name_lists)) / 2)
         yaml_path = os.path.join(log_path, "processed", "door_lever_3_keypoint.yaml")
@@ -218,7 +247,7 @@ def mask_to_yaml(log_path):
         if not os.path.exists(image_path):
             continue
 
-        im = cv2.imread(image_path)
+        im = cv2.imread(image_path,-1)
         left_top_right_bottom = mask2bbox(im)
 
         yaml_dict = {i: {"bbox_bottom_right_xy": [left_top_right_bottom[2], left_top_right_bottom[3]],
@@ -230,7 +259,7 @@ def mask_to_yaml(log_path):
             yaml.dump(yaml_dict, f)
 
         ## Check
-        vis = "%06i_visible_mask.png" % i
+        vis = "%06i_visual_mask.png" % i
         vis_a = os.path.join(mask_frames_path, vis)
         save_path = os.path.join(log_path, "bbox_test")
         assert os.path.exists(vis_a)
@@ -245,6 +274,18 @@ def mask_to_yaml(log_path):
         save_file = os.path.join(save_path, save)
         cv2.imwrite(save_file, draw)
 
+        ## Check2
+        mask_frames_path2 = os.path.join(log_path, "processed","images")
+        vis2 = "%06i_rgb.png" % i
+        vis_a2 = os.path.join(mask_frames_path2, vis2)
+        save_path2 = os.path.join(log_path, "bbox_test2")
+        assert os.path.exists(vis_a2)
+        img2 = cv2.imread(vis_a2)
+        draw2 = cv2.rectangle(img2, (xmin, ymin), (xmax, ymax), (0, 0, 255), 2)
+        save2 = "%06i_bbox_mask2.png" % i
+        save_file2 = os.path.join(save_path2, save2)
+        cv2.imwrite(save_file2, draw2)
+        assert os.path.exists(save_file2)
 
 
 
@@ -376,9 +417,9 @@ class make_my_coco(object):
 
             img_number = int(dataset_yaml_map[key]['rgb_image_filename'].split('_')[0])
             mask_file_path = os.path.join(masks_path, "%06d_mask.png" % img_number)
-
+            # NOTE !!! UNIT16 or UNIT8
+            # ground_truth_binary_mask = cv2.convertScaleAbs(cv2.imread(mask_file_path, cv2.IMREAD_UNCHANGED))
             ground_truth_binary_mask = cv2.imread(mask_file_path, cv2.IMREAD_UNCHANGED)
-
             # plt.imshow(ground_truth_binary_mask)
             # plt.colorbar()
 
@@ -428,14 +469,14 @@ class make_my_coco(object):
 config_dict = {
     'train':
         [
-            # "D:/Student Research Training/mankey_to_coco/train/2019-11-19-21-00-00"
-            "D:/Student Research Training/mankey_to_coco/mankey_dataset/2019-11-19-21-00-00"
+            "D:/Student Research Training/mankey_to_coco/train/2019-11-19-21-00-00"
+            # "D:/Student Research Training/mankey_to_coco/mankey_dataset/2019-11-19-21-00-00"
         ],
 
     'val':
         [
-            # "D:/Student Research Training/mankey_to_coco/val/2019-11-19-21-00-00"
-            "D:/Student Research Training/mankey_to_coco/mankey_dataset2/2019-11-19-21-00-00"
+            "D:/Student Research Training/mankey_to_coco/val/2019-11-19-21-00-00"
+            # "D:/Student Research Training/mankey_to_coco/mankey_dataset2/2019-11-19-21-00-00"
         ]
 }
 
