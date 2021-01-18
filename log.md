@@ -8,5 +8,17 @@ location：
 
 
 
+### 自己包训练
+
+
+
+https://blog.csdn.net/qq_35608277/article/details/88865574
+
+https://blog.csdn.net/weixin_42357472/article/details/93378834
+
+https://zhuanlan.zhihu.com/p/64605565
+
+https://zhuanlan.zhihu.com/p/67121644
+
 
 
